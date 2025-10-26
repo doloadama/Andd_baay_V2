@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { api } from '../services/api';
-import { User, Project, YieldData, CropDistribution } from '../types';
+// FIX: Import `Role` type for consistency.
+import { User, Project, YieldData, CropDistribution, Role } from '../types';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
@@ -19,20 +20,20 @@ const Card: React.FC<{ title: string; value: string; icon: React.ReactNode; colo
 
 interface DashboardProps {
     user: User;
-    role: 'farmer' | 'seller';
+    // FIX: Use the shared `Role` type.
+    role: Role;
     activeProject: Project | null;
+    refreshKey: number;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ user, role, activeProject }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, role, activeProject, refreshKey }) => {
   // State for farmer-specific data
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [totalInvestment, setTotalInvestment] = useState(0);
-  // FIX: Add index signature to CropDistribution to satisfy recharts data prop type.
   const [farmerCropDistribution, setFarmerCropDistribution] = useState<(CropDistribution & { [key: string]: any })[]>([]);
 
   // State for seller/global data
   const [yieldData, setYieldData] = useState<YieldData[]>([]);
-  // FIX: Add index signature to CropDistribution to satisfy recharts data prop type.
   const [cropDistribution, setCropDistribution] = useState<(CropDistribution & { [key: string]: any })[]>([]);
   
   const [recommendation, setRecommendation] = useState<string>('');
@@ -88,7 +89,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, role, activeProject }) => {
     };
 
     fetchData();
-  }, [user, role, activeProject]);
+  }, [user, role, activeProject, refreshKey]);
 
   const netProfit = useMemo(() => totalRevenue - totalInvestment, [totalRevenue, totalInvestment]);
   
@@ -117,8 +118,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, role, activeProject }) => {
                 <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">Your Crop Distribution by Expected Yield (Tons)</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
-                    {/* FIX: Handle potentially undefined 'percent' property provided by recharts Pie component's label prop. */}
-                    {/* Fix: Explicitly convert percent to a number to handle cases where it might be a string. */}
                     <Pie data={farmerCropDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} fill="#8884d8" label={({ name, percent }) => `${name} ${((Number(percent) || 0) * 100).toFixed(0)}%`}>
                         {farmerCropDistribution.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                     </Pie>
@@ -175,8 +174,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, role, activeProject }) => {
                 fill="#8884d8"
                 dataKey="value"
                 nameKey="name"
-                // FIX: Handle potentially undefined 'percent' property provided by recharts Pie component's label prop.
-                // Fix: Explicitly convert percent to a number to handle cases where it might be a string.
                 label={({ name, percent }) => `${name} ${((Number(percent) || 0) * 100).toFixed(0)}%`}
               >
                 {cropDistribution.map((entry, index) => (

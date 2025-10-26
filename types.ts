@@ -1,8 +1,12 @@
+
+export type View = 'dashboard' | 'projects' | 'crops' | 'investments' | 'market' | 'farmers';
+export type Role = 'farmer' | 'seller';
+
 export interface User {
   id: string;
   name: string;
   contact: string;
-  roles: ('farmer' | 'seller')[];
+  roles: Role[];
   projects: Project[];
 }
 
@@ -43,6 +47,7 @@ export interface Harvest {
   listingDate: string; // ISO string format
   pricePerTon: number; // in USD
   status: 'Listed' | 'Sold';
+  buyer?: Pick<User, 'id' | 'name'>;
 }
 
 export interface YieldData {
@@ -53,4 +58,9 @@ export interface YieldData {
 export interface CropDistribution {
   name: string;
   value: number;
+}
+
+export interface ChatMessage {
+  role: 'user' | 'model';
+  parts: { text: string }[];
 }

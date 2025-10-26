@@ -1,116 +1,160 @@
-import { User, Project, Crop, Harvest, YieldData, CropDistribution, Investment } from '../types';
+import { GoogleGenAI, Chat } from "@google/genai";
+import { User, Harvest, YieldData, CropDistribution, Project, Crop, Investment } from '../types';
 
-// Seed data to simulate a Django backend with PostgreSQL.
+// --- MOCK DATA ---
 
-// PROJECTS
-const MOCK_PROJECTS_FARMER_1: Project[] = [
-  {
-    id: 'proj1',
-    name: 'Kaffrine Fields',
-    location: 'Kaffrine, Senegal',
-    farmSize: 70,
-    crops: [
-      { id: 'crop1', projectId: 'proj1', type: 'Maize', plantingDate: '2023-04-15T00:00:00.000Z', soilCondition: 'Excellent', expectedYield: 50, status: 'Harvested' },
-      { id: 'crop3', projectId: 'proj1', type: 'Wheat', plantingDate: '2024-03-10T00:00:00.000Z', soilCondition: 'Good', expectedYield: 60, status: 'Growing' },
-    ],
-    investments: [
-      { id: 'inv1', projectId: 'proj1', type: 'Seeds', description: 'Hybrid Maize Seeds', amount: 500, date: '2024-03-01T00:00:00.000Z' },
-      { id: 'inv3', projectId: 'proj1', type: 'Labor', description: 'Planting labor costs', amount: 1200, date: '2024-03-10T00:00:00.000Z' },
-    ],
-  },
-  {
-    id: 'proj2',
-    name: 'Kaolack Delta',
-    location: 'Kaolack, Senegal',
-    farmSize: 50,
-    crops: [
-      { id: 'crop2', projectId: 'proj2', type: 'Soybeans', plantingDate: '2023-05-20T00:00:00.000Z', soilCondition: 'Good', expectedYield: 40, status: 'Harvested' },
-    ],
-    investments: [
-       { id: 'inv2', projectId: 'proj2', type: 'Fertilizer', description: 'NPK Fertilizer', amount: 800, date: '2024-03-05T00:00:00.000Z' },
-    ],
-  },
+const crops1: Crop[] = [
+  { id: 'c1', projectId: 'p1', type: 'Millet', plantingDate: '2023-06-15T00:00:00.000Z', soilCondition: 'Good', expectedYield: 150, status: 'Harvested' },
+  { id: 'c2', projectId: 'p1', type: 'Sorghum', plantingDate: '2023-07-01T00:00:00.000Z', soilCondition: 'Excellent', expectedYield: 100, status: 'Harvested' },
+];
+const investments1: Investment[] = [
+  { id: 'i1', projectId: 'p1', type: 'Seeds', description: 'High-yield millet seeds', amount: 2000, date: '2023-06-01T00:00:00.000Z' },
+  { id: 'i2', projectId: 'p1', type: 'Fertilizer', description: 'NPK fertilizer', amount: 3500, date: '2023-07-10T00:00:00.000Z' },
+  { id: 'i3', projectId: 'p1', type: 'Labor', description: 'Harvesting labor costs', amount: 5000, date: '2023-10-05T00:00:00.000Z' },
+];
+const project1: Project = { id: 'p1', name: 'Tambacounda Fields', location: 'Tambacounda, Senegal', farmSize: 250, crops: crops1, investments: investments1 };
+
+const crops2: Crop[] = [
+  { id: 'c3', projectId: 'p2', type: 'Peanuts', plantingDate: '2023-06-20T00:00:00.000Z', soilCondition: 'Excellent', expectedYield: 80, status: 'Harvested' },
+];
+const investments2: Investment[] = [
+    { id: 'i4', projectId: 'p2', type: 'Seeds', description: 'Groundnut seeds', amount: 1500, date: '2023-06-05T00:00:00.000Z' },
+    { id: 'i5', projectId: 'p2', type: 'Equipment', description: 'Tractor rental', amount: 1000, date: '2023-06-10T00:00:00.000Z' },
+];
+const project2: Project = { id: 'p2', name: 'Kaolack Grounds', location: 'Kaolack, Senegal', farmSize: 100, crops: crops2, investments: investments2 };
+
+const users: User[] = [
+  { id: 'u1', name: 'Adama Gueye', contact: 'adama@example.com', roles: ['farmer'], projects: [project1] },
+  { id: 'u2', name: 'Fatou Diop', contact: 'fatou@example.com', roles: ['farmer', 'seller'], projects: [project2] },
+  { id: 'u3', name: 'Moussa Sow', contact: 'moussa@example.com', roles: ['seller'], projects: [] },
 ];
 
-const MOCK_PROJECTS_FARMER_2: Project[] = [
-  {
-    id: 'proj3',
-    name: 'Thiès Gardens',
-    location: 'Thiès, Senegal',
-    farmSize: 80,
-    crops: [
-        { id: 'crop4', projectId: 'proj3', type: 'Tomatoes', plantingDate: '2024-04-01T00:00:00.000Z', soilCondition: 'Excellent', expectedYield: 25, status: 'Growing' },
-        { id: 'crop5', projectId: 'proj3', type: 'Potatoes', plantingDate: '2024-03-25T00:00:00.000Z', soilCondition: 'Fair', expectedYield: 30, status: 'Harvesting' },
-    ],
-    investments: [
-        { id: 'inv4', projectId: 'proj3', type: 'Equipment', description: 'New irrigation pump', amount: 1500, date: '2024-02-20T00:00:00.000Z' },
-        { id: 'inv5', projectId: 'proj3', type: 'Seeds', description: 'Tomato and Potato seeds', amount: 400, date: '2024-03-15T00:00:00.000Z' },
-    ]
-  }
+const harvests: Harvest[] = [
+  { id: 'h1', farmer: { id: 'u1', name: 'Adama Gueye', contact: 'adama@example.com' }, project: { id: 'p1', name: 'Tambacounda Fields', location: 'Tambacounda' }, cropType: 'Millet', quantity: 145, listingDate: '2023-10-20T00:00:00.000Z', pricePerTon: 350, status: 'Sold', buyer: { id: 'u3', name: 'Moussa Sow' } },
+  { id: 'h2', farmer: { id: 'u1', name: 'Adama Gueye', contact: 'adama@example.com' }, project: { id: 'p1', name: 'Tambacounda Fields', location: 'Tambacounda' }, cropType: 'Sorghum', quantity: 98, listingDate: '2023-11-01T00:00:00.000Z', pricePerTon: 320, status: 'Listed' },
+  { id: 'h3', farmer: { id: 'u2', name: 'Fatou Diop', contact: 'fatou@example.com' }, project: { id: 'p2', name: 'Kaolack Grounds', location: 'Kaolack' }, cropType: 'Peanuts', quantity: 80, listingDate: '2023-10-15T00:00:00.000Z', pricePerTon: 800, status: 'Sold', buyer: {id: 'u3', name: 'Moussa Sow'} },
 ];
 
-const MOCK_PROJECTS_FARMER_3: Project[] = [
-    {
-        id: 'proj4',
-        name: 'River Side Farm',
-        location: 'Saint-Louis, Senegal',
-        farmSize: 200,
-        crops: [
-            { id: 'crop6', projectId: 'proj4', type: 'Rice', plantingDate: '2023-06-01T00:00:00.000Z', soilCondition: 'Good', expectedYield: 100, status: 'Harvested' },
-            { id: 'crop7', projectId: 'proj4', type: 'Cotton', plantingDate: '2024-05-15T00:00:00.000Z', soilCondition: 'Good', expectedYield: 80, status: 'Planting' },
-        ],
-        investments: [
-            { id: 'inv6', projectId: 'proj4', type: 'Labor', description: 'Harvesting labor for rice', amount: 2000, date: '2023-11-01T00:00:00.000Z'},
-        ]
-    }
+const yieldData: YieldData[] = [
+    { year: 2021, yield: 350 },
+    { year: 2022, yield: 380 },
+    { year: 2023, yield: 410 },
+];
+
+const cropDistribution: CropDistribution[] = [
+    { name: 'Millet', value: 400 },
+    { name: 'Peanuts', value: 300 },
+    { name: 'Sorghum', value: 200 },
+    { name: 'Rice', value: 150 },
+    { name: 'Other', value: 100 },
 ];
 
 
-// USERS
-export const MOCK_USERS: User[] = [
-  { id: 'farmer1', name: 'Adama Gueye', contact: '+221771234567', roles: ['farmer', 'seller'], projects: MOCK_PROJECTS_FARMER_1 },
-  { id: 'farmer2', name: 'Fatou Diop', contact: '+221777654321', roles: ['farmer'], projects: MOCK_PROJECTS_FARMER_2 },
-  { id: 'farmer3', name: 'Moussa Sow', contact: '+221772345678', roles: ['farmer', 'seller'], projects: MOCK_PROJECTS_FARMER_3 },
-];
+// --- API Abstraction ---
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
-// HARVESTS
-export const MOCK_HARVESTS: Harvest[] = [
-  { id: 'harvest1', farmer: MOCK_USERS[0], project: MOCK_PROJECTS_FARMER_1[0], cropType: 'Maize', quantity: 48, listingDate: '2023-09-01T00:00:00.000Z', pricePerTon: 150, status: 'Sold' },
-  { id: 'harvest2', farmer: MOCK_USERS[0], project: MOCK_PROJECTS_FARMER_1[1], cropType: 'Soybeans', quantity: 38, listingDate: '2023-10-15T00:00:00.000Z', pricePerTon: 300, status: 'Sold' },
-  { id: 'harvest3', farmer: MOCK_USERS[2], project: MOCK_PROJECTS_FARMER_3[0], cropType: 'Rice', quantity: 95, listingDate: '2023-11-20T00:00:00.000Z', pricePerTon: 220, status: 'Sold' },
-  { id: 'harvest4', farmer: MOCK_USERS[1], project: MOCK_PROJECTS_FARMER_2[0], cropType: 'Potatoes', quantity: 28, listingDate: '2024-07-05T00:00:00.000Z', pricePerTon: 400, status: 'Listed' },
-];
+const mockFetch = <T>(data: T): Promise<T> => 
+  new Promise(resolve => setTimeout(() => resolve(data), 500));
 
-// Mock analytics data
-export const MOCK_YIELD_DATA: YieldData[] = [
-  { year: 2020, yield: 280 },
-  { year: 2021, yield: 350 },
-  { year: 2022, yield: 320 },
-  { year: 2023, yield: 410 },
-  { year: 2024, yield: 250 }, // In progress
-];
-
-export const MOCK_CROP_DISTRIBUTION: CropDistribution[] = [
-  { name: 'Maize', value: 400 },
-  { name: 'Rice', value: 300 },
-  { name: 'Soybeans', value: 250 },
-  { name: 'Wheat', value: 200 },
-  { name: 'Others', value: 150 },
-];
-
-// In a real application, these would be async functions making API calls.
 export const api = {
-  getUsers: (): Promise<User[]> => Promise.resolve(MOCK_USERS),
-  getMarketListings: (): Promise<Harvest[]> => Promise.resolve(MOCK_HARVESTS),
-  getYieldAnalytics: (): Promise<YieldData[]> => Promise.resolve(MOCK_YIELD_DATA),
-  getCropDistribution: (): Promise<CropDistribution[]> => Promise.resolve(MOCK_CROP_DISTRIBUTION),
-  getWeatherRecommendation: (location: string): Promise<string> => {
-    // This would call a weather API and a Gemini model for recommendations
-    const recommendations = [
-      `Sunny spells expected in ${location}. Ideal for harvesting mature crops. Consider irrigating young plants in the evening.`,
-      `High humidity in ${location}. Monitor for fungal diseases on tomato and potato plants. Ensure good air circulation.`,
-      `Light showers predicted for ${location}. Good time for planting new seeds. Hold off on pesticide application.`,
-    ];
-    return Promise.resolve(recommendations[Math.floor(Math.random() * recommendations.length)]);
+  getUsers: (): Promise<User[]> => mockFetch(JSON.parse(JSON.stringify(users))),
+  
+  getMarketListings: (): Promise<Harvest[]> => mockFetch([...harvests]),
+
+  getYieldAnalytics: (): Promise<YieldData[]> => mockFetch(yieldData),
+
+  getCropDistribution: (): Promise<CropDistribution[]> => mockFetch(cropDistribution),
+  
+  addProject: (userId: string, newProjectData: { name: string; location: string; farmSize: number }): Promise<Project> => {
+    const user = users.find(u => u.id === userId);
+    if (user) {
+        const newProject: Project = {
+            ...newProjectData,
+            id: `p${Date.now()}`,
+            crops: [],
+            investments: [],
+        };
+        user.projects.push(newProject);
+        return mockFetch(newProject);
+    }
+    return Promise.reject(new Error('User not found'));
   },
+
+  addHarvest: (newHarvestData: Omit<Harvest, 'id' | 'listingDate' | 'status'>): Promise<Harvest> => {
+    const newHarvest: Harvest = {
+      ...newHarvestData,
+      id: `h${Date.now()}`,
+      listingDate: new Date().toISOString(),
+      status: 'Listed',
+    };
+    harvests.push(newHarvest);
+    return mockFetch(newHarvest);
+  },
+
+  buyHarvest: (harvestId: string, buyer: Pick<User, 'id' | 'name'>): Promise<Harvest | null> => {
+    const harvestIndex = harvests.findIndex(h => h.id === harvestId);
+    if (harvestIndex !== -1) {
+        if (harvests[harvestIndex].status === 'Listed') {
+            harvests[harvestIndex].status = 'Sold';
+            harvests[harvestIndex].buyer = buyer;
+            return mockFetch(harvests[harvestIndex]);
+        }
+    }
+    return mockFetch(null);
+  },
+
+  getWeatherRecommendation: async (location: string): Promise<string> => {
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: `Provide a short, actionable farming recommendation for today based on the weather in ${location}. Focus on one key activity. For example: 'Weather is clear and sunny. Ideal for harvesting millet.' or 'High humidity today. Monitor crops for fungal diseases.'`
+      });
+      return response.text;
+    } catch (error) {
+      console.error("Failed to get weather recommendation:", error);
+      return "Could not fetch weather recommendation. Please check your connection or API key.";
+    }
+  },
+
+  startChatSession: (currentUser: User, allUsers: User[], marketListings: Harvest[]): Chat => {
+    // Sanitize data for the prompt
+    const currentUserData = {
+        id: currentUser.id,
+        name: currentUser.name,
+        roles: currentUser.roles,
+        projects: currentUser.projects.map(p => ({
+            id: p.id,
+            name: p.name,
+            location: p.location,
+            farmSize: p.farmSize,
+            crops: p.crops.map(c => ({ type: c.type, status: c.status, expectedYield: c.expectedYield })),
+            investments: p.investments.map(i => ({ type: i.type, amount: i.amount }))
+        }))
+    };
+
+    const systemInstruction = `You are "Andd Baay Helper", a friendly and expert assistant for an agricultural platform in Senegal. Your goal is to help users manage their farm data and navigate the marketplace.
+
+    **CONTEXT:**
+    - Today's Date: ${new Date().toLocaleDateString()}
+    - The current user's data is: ${JSON.stringify(currentUserData, null, 2)}
+    - The complete list of all farmers on the platform is: ${JSON.stringify(allUsers.filter(u => u.roles.includes('farmer')).map(u => ({ id: u.id, name: u.name, projectCount: u.projects.length })), null, 2)}
+    - The current marketplace listings are: ${JSON.stringify(marketListings.map(l => ({ crop: l.cropType, quantity: l.quantity, price: l.pricePerTon, status: l.status, farmer: l.farmer.name })), null, 2)}
+
+    **INSTRUCTIONS:**
+    1.  Always be concise, helpful, and friendly.
+    2.  Answer questions based *only* on the provided context. Do not invent data.
+    3.  If asked about personal data (like revenue, profit, investments), only use the data for the currently logged-in user.
+    4.  You can perform calculations like summing investments, calculating total revenue from sold items, or finding available crops.
+    5.  When asked a question you cannot answer from the context, politely state that you don't have that information.
+    `;
+
+    const chat = ai.chats.create({
+        model: 'gemini-2.5-flash',
+        config: {
+            systemInstruction
+        }
+    });
+
+    return chat;
+  }
 };

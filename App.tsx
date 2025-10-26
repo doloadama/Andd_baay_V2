@@ -1,149 +1,162 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Login from './components/Login';
 import Sidebar from './components/Sidebar';
+import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import FarmerManagement from './components/FarmerManagement';
-import CropTracking from './components/CropTracking';
 import Marketplace from './components/Marketplace';
-import InvestmentTracking from './components/InvestmentTracking';
 import ProjectsManagement from './components/ProjectsManagement';
-import { User, Project } from './types';
-import { MOCK_USERS } from './services/api';
-
-export type View = 'dashboard' | 'farmers' | 'crops' | 'market' | 'investments' | 'projects';
-export type Role = 'farmer' | 'seller';
+import CropTracking from './components/CropTracking';
+import InvestmentTracking from './components/InvestmentTracking';
+import Chatbot from './components/Chatbot';
+import { User, Project, Harvest, View, Role } from './types';
+import { api } from './services/api';
 
 const App: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [marketListings, setMarketListings] = useState<Harvest[]>([]);
   const [activeView, setActiveView] = useState<View>('dashboard');
   const [activeRole, setActiveRole] = useState<Role>('farmer');
   const [activeProject, setActiveProject] = useState<Project | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshDataKey, setRefreshDataKey] = useState(0);
 
-  const handleLogin = useCallback((username: string) => {
-    const user = MOCK_USERS.find(f => f.name.toLowerCase().replace(' ', '') === username.toLowerCase());
-    if (user) {
-      setCurrentUser(user);
-      setIsAuthenticated(true);
-      const initialRole = user.roles.includes('farmer') ? 'farmer' : user.roles[0];
-      setActiveRole(initialRole);
-      if (initialRole === 'farmer' && user.projects.length > 0) {
-        setActiveProject(user.projects[0]);
-      }
-    } else {
-      const defaultUser = MOCK_USERS[0];
-      setCurrentUser(defaultUser);
-      setIsAuthenticated(true);
-      const initialRole = defaultUser.roles.includes('farmer') ? 'farmer' : defaultUser.roles[0];
-      setActiveRole(initialRole);
-       if (initialRole === 'farmer' && defaultUser.projects.length > 0) {
-        setActiveProject(defaultUser.projects[0]);
-      }
-    }
-  }, []);
+  const triggerDataRefresh = () => setRefreshDataKey(prev => prev + 1);
 
-  const handleLogout = useCallback(() => {
-    setIsAuthenticated(false);
-    setCurrentUser(null);
-    setActiveView('dashboard');
-    setActiveRole('farmer');
-    setActiveProject(null);
-  }, []);
-  
-  // When role changes, reset project if new role is not farmer
   useEffect(() => {
-    if (activeRole === 'seller') {
+    setIsLoading(true);
+    const fetchData = async () => {
+      try {
+        const [allUsers, allListings] = await Promise.all([
+            api.getUsers(),
+            api.getMarketListings()
+        ]);
+        
+        setUsers(allUsers);
+        setMarketListings(allListings);
+
+        // If a user is logged in, refresh their data from the new list
+        if (user) {
+          const updatedUser = allUsers.find(u => u.id === user.id);
+          if (updatedUser) {
+            setUser(updatedUser);
+          } else {
+            // User might have been deleted in a real scenario, so log out
+            handleLogout();
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch initial data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, [refreshDataKey]);
+  
+  useEffect(() => {
+    if (user && user.projects.length > 0 && !activeProject) {
+      setActiveProject(user.projects[0]);
+    } else if (user && user.projects.length === 0) {
       setActiveProject(null);
-    } else if (currentUser && currentUser.projects.length > 0) {
-      setActiveProject(currentUser.projects[0]);
+    } else if (user && activeProject) {
+        // Ensure active project is still valid after a data refresh
+        const updatedActiveProject = user.projects.find(p => p.id === activeProject.id);
+        setActiveProject(updatedActiveProject || (user.projects.length > 0 ? user.projects[0] : null));
     }
-  }, [activeRole, currentUser]);
+  }, [user, activeProject]);
 
-  const renderContent = useMemo(() => {
-    if (!currentUser) return <div>Loading...</div>;
+  const handleLogin = (username: string) => {
+    const foundUser = users.find(u => u.name.toLowerCase().replace(' ', '') === username.toLowerCase());
+    if (foundUser) {
+      setUser(foundUser);
+      // Default to the first role, or 'farmer' if available
+      const defaultRole = foundUser.roles.includes('farmer') ? 'farmer' : foundUser.roles[0];
+      setActiveRole(defaultRole);
+      setActiveView('dashboard');
+    } else {
+      alert('User not found!');
+    }
+  };
 
+  const handleLogout = () => {
+    setUser(null);
+    setActiveProject(null);
+  };
+
+  const switchRole = (role: Role) => {
+    if (user?.roles.includes(role)) {
+      setActiveRole(role);
+      setActiveView('dashboard'); // Reset to dashboard on role switch
+    }
+  };
+  
+  const renderContent = () => {
+    if (!user) return null;
+
+    if (activeRole === 'farmer' && !activeProject && (activeView === 'dashboard' || activeView === 'crops' || activeView === 'investments')) {
+        return (
+             <div className="text-center p-10">
+                <h2 className="text-2xl font-bold mb-4 text-gray-700 dark:text-gray-200">Welcome, {user.name}!</h2>
+                <p className="text-gray-500 dark:text-gray-400">You don't have any projects yet. Please go to "My Projects" to create one.</p>
+            </div>
+        );
+    }
+    
     switch (activeView) {
       case 'dashboard':
-        return <Dashboard user={currentUser} role={activeRole} activeProject={activeProject} />;
-      case 'farmers':
-        return activeRole === 'seller' ? <FarmerManagement /> : <div className="text-red-500">Access denied for this role.</div>;
-      case 'crops':
-        return activeRole === 'farmer' && activeProject ? <CropTracking activeProject={activeProject} /> : <div className="text-gray-500">{activeRole === 'farmer' ? 'Please select a project to view crops.' : 'Access denied for this role.'}</div>;
-      case 'investments':
-        return activeRole === 'farmer' && activeProject ? <InvestmentTracking activeProject={activeProject} /> : <div className="text-gray-500">{activeRole === 'farmer' ? 'Please select a project to view investments.' : 'Access denied for this role.'}</div>;
+        return <Dashboard user={user} role={activeRole} activeProject={activeProject} refreshKey={refreshDataKey} />;
       case 'projects':
-        return activeRole === 'farmer' ? <ProjectsManagement user={currentUser} /> : <div className="text-red-500">Access denied for this role.</div>;
+        return <ProjectsManagement user={user} onDataChange={triggerDataRefresh} />;
+      case 'crops':
+        return activeProject ? <CropTracking activeProject={activeProject} /> : null;
+      case 'investments':
+        return activeProject ? <InvestmentTracking activeProject={activeProject} /> : null;
       case 'market':
-        return <Marketplace />;
+        return <Marketplace currentUser={user} role={activeRole} onDataChange={triggerDataRefresh} />;
+      case 'farmers':
+        return <FarmerManagement users={users.filter(u => u.roles.includes('farmer'))} />;
       default:
-        return <Dashboard user={currentUser} role={activeRole} activeProject={activeProject}/>;
+        return <Dashboard user={user} role={activeRole} activeProject={activeProject} refreshKey={refreshDataKey} />;
     }
-  }, [activeView, currentUser, activeRole, activeProject]);
+  };
 
-  if (!isAuthenticated || !currentUser) {
-    return (
-      <div className="bg-gray-100 dark:bg-gray-900">
-        <Login onLogin={handleLogin} />
-      </div>
-    );
+  if (isLoading && !user) { // Only show initial full-screen loading
+    return <div className="h-screen w-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900"><p>Loading application...</p></div>;
+  }
+
+  if (!user) {
+    return <Login onLogin={handleLogin} />;
   }
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-800 font-sans">
-      <Sidebar activeView={activeView} setActiveView={setActiveView} onLogout={handleLogout} activeRole={activeRole} />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="flex justify-between items-center p-4 bg-white dark:bg-gray-900 border-b dark:border-gray-700">
-          <h1 className="text-2xl font-semibold text-gray-800 dark:text-white capitalize">{activeView === 'farmers' ? 'Farmer Directory' : activeView}</h1>
-          <div className="flex items-center space-x-4">
-            {activeRole === 'farmer' && currentUser.projects.length > 0 && (
-               <div className="relative">
-                <select 
-                  value={activeProject?.id || ''}
-                  onChange={(e) => {
-                    const project = currentUser.projects.find(p => p.id === e.target.value);
-                    setActiveProject(project || null);
-                  }}
-                  className="appearance-none bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2 px-4 pr-8 rounded-md leading-tight focus:outline-none focus:bg-white dark:focus:bg-gray-800 focus:border-gray-500"
-                  aria-label="Switch active project"
-                >
-                  {currentUser.projects.map(project => (
-                    <option key={project.id} value={project.id}>{project.name}</option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-gray-200">
-                  <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                </div>
-              </div>
-            )}
-
-            {currentUser.roles.length > 1 && (
-              <div className="relative">
-                <select 
-                  value={activeRole}
-                  onChange={(e) => {
-                    setActiveRole(e.target.value as Role);
-                    setActiveView('dashboard'); // Reset to dashboard on role change
-                  }}
-                  className="appearance-none bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2 px-4 pr-8 rounded-md leading-tight focus:outline-none focus:bg-white dark:focus:bg-gray-800 focus:border-gray-500"
-                  aria-label="Switch user role"
-                >
-                  {currentUser.roles.map(role => (
-                    <option key={role} value={role} className="capitalize">{role.charAt(0).toUpperCase() + role.slice(1)}</option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-gray-200">
-                  <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                </div>
-              </div>
-            )}
-            <span className="text-gray-600 dark:text-gray-300">Welcome, {currentUser.name}</span>
-            <img className="w-10 h-10 rounded-full" src={`https://i.pravatar.cc/150?u=${currentUser.id}`} alt="User avatar" />
-          </div>
-        </header>
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-800 p-6">
-          {renderContent}
-        </main>
-      </div>
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+      <Sidebar
+        activeView={activeView}
+        setActiveView={setActiveView}
+        onLogout={handleLogout}
+        activeRole={activeRole}
+      />
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <Header 
+            user={user}
+            activeRole={activeRole}
+            switchRole={switchRole}
+            activeProject={activeProject}
+            setActiveProject={setActiveProject}
+        />
+        <div className="flex-1 p-6 overflow-y-auto">
+          {renderContent()}
+        </div>
+      </main>
+       {user && (
+          <Chatbot 
+            currentUser={user}
+            allUsers={users}
+            marketListings={marketListings}
+          />
+        )}
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Role } from '../App';
+// FIX: `View` and `Role` types are now imported from the central `types.ts` file.
+import { View, Role } from '../types';
 
 interface SidebarProps {
   activeView: View;
