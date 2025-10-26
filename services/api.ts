@@ -1,35 +1,84 @@
-
-import { Farmer, Crop, Harvest, YieldData, CropDistribution } from '../types';
+import { User, Project, Crop, Harvest, YieldData, CropDistribution, Investment } from '../types';
 
 // Seed data to simulate a Django backend with PostgreSQL.
 
-export const MOCK_CROPS_FARMER_1: Crop[] = [
-  { id: 'crop1', type: 'Maize', plantingDate: '2023-04-15T00:00:00.000Z', soilCondition: 'Excellent', expectedYield: 50, status: 'Harvested' },
-  { id: 'crop2', type: 'Soybeans', plantingDate: '2023-05-20T00:00:00.000Z', soilCondition: 'Good', expectedYield: 40, status: 'Harvested' },
-  { id: 'crop3', type: 'Wheat', plantingDate: '2024-03-10T00:00:00.000Z', soilCondition: 'Good', expectedYield: 60, status: 'Growing' },
+// PROJECTS
+const MOCK_PROJECTS_FARMER_1: Project[] = [
+  {
+    id: 'proj1',
+    name: 'Kaffrine Fields',
+    location: 'Kaffrine, Senegal',
+    farmSize: 70,
+    crops: [
+      { id: 'crop1', projectId: 'proj1', type: 'Maize', plantingDate: '2023-04-15T00:00:00.000Z', soilCondition: 'Excellent', expectedYield: 50, status: 'Harvested' },
+      { id: 'crop3', projectId: 'proj1', type: 'Wheat', plantingDate: '2024-03-10T00:00:00.000Z', soilCondition: 'Good', expectedYield: 60, status: 'Growing' },
+    ],
+    investments: [
+      { id: 'inv1', projectId: 'proj1', type: 'Seeds', description: 'Hybrid Maize Seeds', amount: 500, date: '2024-03-01T00:00:00.000Z' },
+      { id: 'inv3', projectId: 'proj1', type: 'Labor', description: 'Planting labor costs', amount: 1200, date: '2024-03-10T00:00:00.000Z' },
+    ],
+  },
+  {
+    id: 'proj2',
+    name: 'Kaolack Delta',
+    location: 'Kaolack, Senegal',
+    farmSize: 50,
+    crops: [
+      { id: 'crop2', projectId: 'proj2', type: 'Soybeans', plantingDate: '2023-05-20T00:00:00.000Z', soilCondition: 'Good', expectedYield: 40, status: 'Harvested' },
+    ],
+    investments: [
+       { id: 'inv2', projectId: 'proj2', type: 'Fertilizer', description: 'NPK Fertilizer', amount: 800, date: '2024-03-05T00:00:00.000Z' },
+    ],
+  },
 ];
 
-export const MOCK_CROPS_FARMER_2: Crop[] = [
-  { id: 'crop4', type: 'Tomatoes', plantingDate: '2024-04-01T00:00:00.000Z', soilCondition: 'Excellent', expectedYield: 25, status: 'Growing' },
-  { id: 'crop5', type: 'Potatoes', plantingDate: '2024-03-25T00:00:00.000Z', soilCondition: 'Fair', expectedYield: 30, status: 'Harvesting' },
+const MOCK_PROJECTS_FARMER_2: Project[] = [
+  {
+    id: 'proj3',
+    name: 'Thiès Gardens',
+    location: 'Thiès, Senegal',
+    farmSize: 80,
+    crops: [
+        { id: 'crop4', projectId: 'proj3', type: 'Tomatoes', plantingDate: '2024-04-01T00:00:00.000Z', soilCondition: 'Excellent', expectedYield: 25, status: 'Growing' },
+        { id: 'crop5', projectId: 'proj3', type: 'Potatoes', plantingDate: '2024-03-25T00:00:00.000Z', soilCondition: 'Fair', expectedYield: 30, status: 'Harvesting' },
+    ],
+    investments: [
+        { id: 'inv4', projectId: 'proj3', type: 'Equipment', description: 'New irrigation pump', amount: 1500, date: '2024-02-20T00:00:00.000Z' },
+        { id: 'inv5', projectId: 'proj3', type: 'Seeds', description: 'Tomato and Potato seeds', amount: 400, date: '2024-03-15T00:00:00.000Z' },
+    ]
+  }
 ];
 
-export const MOCK_CROPS_FARMER_3: Crop[] = [
-  { id: 'crop6', type: 'Rice', plantingDate: '2023-06-01T00:00:00.000Z', soilCondition: 'Good', expectedYield: 100, status: 'Harvested' },
-  { id: 'crop7', type: 'Cotton', plantingDate: '2024-05-15T00:00:00.000Z', soilCondition: 'Good', expectedYield: 80, status: 'Planting' },
+const MOCK_PROJECTS_FARMER_3: Project[] = [
+    {
+        id: 'proj4',
+        name: 'River Side Farm',
+        location: 'Saint-Louis, Senegal',
+        farmSize: 200,
+        crops: [
+            { id: 'crop6', projectId: 'proj4', type: 'Rice', plantingDate: '2023-06-01T00:00:00.000Z', soilCondition: 'Good', expectedYield: 100, status: 'Harvested' },
+            { id: 'crop7', projectId: 'proj4', type: 'Cotton', plantingDate: '2024-05-15T00:00:00.000Z', soilCondition: 'Good', expectedYield: 80, status: 'Planting' },
+        ],
+        investments: [
+            { id: 'inv6', projectId: 'proj4', type: 'Labor', description: 'Harvesting labor for rice', amount: 2000, date: '2023-11-01T00:00:00.000Z'},
+        ]
+    }
 ];
 
-export const MOCK_FARMERS: Farmer[] = [
-  { id: 'farmer1', name: 'Adama Gueye', location: 'Kaolack, Senegal', contact: '+221771234567', farmSize: 120, crops: MOCK_CROPS_FARMER_1 },
-  { id: 'farmer2', name: 'Fatou Diop', location: 'Thiès, Senegal', contact: '+221777654321', farmSize: 80, crops: MOCK_CROPS_FARMER_2 },
-  { id: 'farmer3', name: 'Moussa Sow', location: 'Saint-Louis, Senegal', contact: '+221772345678', farmSize: 200, crops: MOCK_CROPS_FARMER_3 },
+
+// USERS
+export const MOCK_USERS: User[] = [
+  { id: 'farmer1', name: 'Adama Gueye', contact: '+221771234567', roles: ['farmer', 'seller'], projects: MOCK_PROJECTS_FARMER_1 },
+  { id: 'farmer2', name: 'Fatou Diop', contact: '+221777654321', roles: ['farmer'], projects: MOCK_PROJECTS_FARMER_2 },
+  { id: 'farmer3', name: 'Moussa Sow', contact: '+221772345678', roles: ['farmer', 'seller'], projects: MOCK_PROJECTS_FARMER_3 },
 ];
 
+// HARVESTS
 export const MOCK_HARVESTS: Harvest[] = [
-  { id: 'harvest1', farmer: MOCK_FARMERS[0], cropType: 'Maize', quantity: 48, listingDate: '2023-09-01T00:00:00.000Z', pricePerTon: 150 },
-  { id: 'harvest2', farmer: MOCK_FARMERS[0], cropType: 'Soybeans', quantity: 38, listingDate: '2023-10-15T00:00:00.000Z', pricePerTon: 300 },
-  { id: 'harvest3', farmer: MOCK_FARMERS[2], cropType: 'Rice', quantity: 95, listingDate: '2023-11-20T00:00:00.000Z', pricePerTon: 220 },
-  { id: 'harvest4', farmer: MOCK_FARMERS[1], cropType: 'Potatoes', quantity: 28, listingDate: '2024-07-05T00:00:00.000Z', pricePerTon: 400 },
+  { id: 'harvest1', farmer: MOCK_USERS[0], project: MOCK_PROJECTS_FARMER_1[0], cropType: 'Maize', quantity: 48, listingDate: '2023-09-01T00:00:00.000Z', pricePerTon: 150, status: 'Sold' },
+  { id: 'harvest2', farmer: MOCK_USERS[0], project: MOCK_PROJECTS_FARMER_1[1], cropType: 'Soybeans', quantity: 38, listingDate: '2023-10-15T00:00:00.000Z', pricePerTon: 300, status: 'Sold' },
+  { id: 'harvest3', farmer: MOCK_USERS[2], project: MOCK_PROJECTS_FARMER_3[0], cropType: 'Rice', quantity: 95, listingDate: '2023-11-20T00:00:00.000Z', pricePerTon: 220, status: 'Sold' },
+  { id: 'harvest4', farmer: MOCK_USERS[1], project: MOCK_PROJECTS_FARMER_2[0], cropType: 'Potatoes', quantity: 28, listingDate: '2024-07-05T00:00:00.000Z', pricePerTon: 400, status: 'Listed' },
 ];
 
 // Mock analytics data
@@ -51,11 +100,7 @@ export const MOCK_CROP_DISTRIBUTION: CropDistribution[] = [
 
 // In a real application, these would be async functions making API calls.
 export const api = {
-  getFarmers: (): Promise<Farmer[]> => Promise.resolve(MOCK_FARMERS),
-  getCropsByFarmer: (farmerId: string): Promise<Crop[]> => {
-    const farmer = MOCK_FARMERS.find(f => f.id === farmerId);
-    return Promise.resolve(farmer ? farmer.crops : []);
-  },
+  getUsers: (): Promise<User[]> => Promise.resolve(MOCK_USERS),
   getMarketListings: (): Promise<Harvest[]> => Promise.resolve(MOCK_HARVESTS),
   getYieldAnalytics: (): Promise<YieldData[]> => Promise.resolve(MOCK_YIELD_DATA),
   getCropDistribution: (): Promise<CropDistribution[]> => Promise.resolve(MOCK_CROP_DISTRIBUTION),

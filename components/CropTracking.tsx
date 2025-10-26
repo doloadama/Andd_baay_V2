@@ -1,10 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
-import { Farmer, Crop } from '../types';
-import { api } from '../services/api';
+import { Project, Crop } from '../types';
 
 interface CropTrackingProps {
-  farmer: Farmer;
+  activeProject: Project;
 }
 
 const getStatusColor = (status: Crop['status']) => {
@@ -17,31 +15,19 @@ const getStatusColor = (status: Crop['status']) => {
   }
 };
 
-const CropTracking: React.FC<CropTrackingProps> = ({ farmer }) => {
+const CropTracking: React.FC<CropTrackingProps> = ({ activeProject }) => {
   const [crops, setCrops] = useState<Crop[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const fetchCrops = async () => {
-      setLoading(true);
-      try {
-        const cropsData = await api.getCropsByFarmer(farmer.id);
-        setCrops(cropsData);
-      } catch (error) {
-        console.error("Failed to fetch crops:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCrops();
-  }, [farmer.id]);
+    // Data is now passed via props, so we just set it.
+    // In a real app, you might re-fetch if the activeProject.id changes.
+    setCrops(activeProject.crops);
+  }, [activeProject]);
   
-  if (loading) return <div className="text-center">Loading your crops...</div>;
-
   return (
     <div className="space-y-6">
       <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Add New Crop</h2>
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Add New Crop for <span className="text-green-500">{activeProject.name}</span></h2>
         <form className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <input type="text" placeholder="Crop Type (e.g., Millet)" className="p-2 border rounded bg-gray-50 dark:bg-gray-800 dark:border-gray-600" />
           <input type="date" placeholder="Planting Date" className="p-2 border rounded bg-gray-50 dark:bg-gray-800 dark:border-gray-600" />
@@ -59,7 +45,7 @@ const CropTracking: React.FC<CropTrackingProps> = ({ farmer }) => {
       </div>
 
       <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Your Crop Log</h2>
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Crop Log for <span className="text-green-500">{activeProject.name}</span></h2>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-800">
