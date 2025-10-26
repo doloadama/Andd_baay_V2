@@ -9,23 +9,16 @@ interface HeaderProps {
   setActiveProject: (project: Project | null) => void;
 }
 
-const mosaicImages = [
-  'https://picsum.photos/400/300?image=1056', // Field
-  'https://picsum.photos/400/300?image=1078', // Hands with soil
-  'https://picsum.photos/400/300?image=995',  // Wheat
-  'https://picsum.photos/400/300?image=835',  // Tractor
-];
+const heroImage = 'https://picsum.photos/1600/400?image=431';
 
 const Header: React.FC<HeaderProps> = ({ user, activeRole, switchRole, activeProject, setActiveProject }) => {
   return (
-    <header className="relative bg-gray-800 text-white shadow-lg overflow-hidden">
-      {/* Mosaic Background */}
-      <div className="absolute inset-0 grid grid-cols-4 opacity-30">
-        {mosaicImages.map((src, index) => (
-          <div key={index} className="h-full bg-cover bg-center" style={{ backgroundImage: `url(${src})` }}></div>
-        ))}
-      </div>
-      <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/70 to-transparent"></div>
+    <header 
+      className="relative bg-gray-800 text-white shadow-lg overflow-hidden bg-cover bg-center"
+      style={{ backgroundImage: `url(${heroImage})` }}
+    >
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/60 to-black/20"></div>
 
       {/* Content */}
       <div className="relative z-10 p-4">
